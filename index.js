@@ -1,7 +1,8 @@
-import { Analyzer } from "./analyzer.js";
+import { getFundamental, Transformer } from "./analyzer.js";
 import { Renderer } from "./renderer.js";
+import { SAMPLING_RATE } from "./constants.js";
 
-let stream = navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000 } });
+let stream = navigator.mediaDevices.getUserMedia({ audio: { sampleRate: SAMPLING_RATE } });
 
 /**
  * Run the tuner on a given input audio stream
@@ -10,30 +11,19 @@ let stream = navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000 } 
  */
 function run(stream) {
   let canvas = document.getElementById("canvas");
-  let analyzer = new Analyzer(stream);
+  let transformer = new Transformer(stream);
   let renderer = new Renderer(canvas);
 
   function tick() {
     requestAnimationFrame(tick);
-    analyzer.refresh();
-    renderer.render(analyzer.freqData);
+    let fftData = transformer.getFftData();
+    let {freq: f0, nearestNote: nearest, cents }  = getFundamental(fftData);
+    console.log(`f0: ${f0}, nearest: ${nearest.value} (${nearest.name}), cents: ${cents}`);
+
+    renderer.renderTuner(f0, nearest.value, cents);
   };
 
   tick();
-}
-
-function maxIdx(data) {
-  let maxIdx = 0;
-  let max = data[maxIdx];
-
-  for (let i = 0; i < data.length; i++) {
-    if (data[i] > max) {
-      max = data[i];
-      maxIdx = i;
-    }
-  }
-
-  return maxIdx;
 }
 
 stream.then(run);
