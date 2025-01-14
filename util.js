@@ -1,5 +1,20 @@
+/**
+ * The number of samples per second of the input stream
+ */
 export const SAMPLING_RATE = 48000;
+
+/**
+ * The amount of samples used in a single FFT window.
+ *
+ * This in part determines the frequency resolution.
+ */
 export const FFT_SIZE = 32 * 1024;
+
+/**
+ * The number of actual FFT bins.
+ *
+ * For real-valued functions, we only need half of the Fourier coefficients.
+ */
 export const BIN_COUNT = FFT_SIZE / 2;
 
 /**
@@ -142,6 +157,13 @@ export function binToHz(bin) {
 /**
  * Transform an array of FFT data into its Harmonic Product Spectrum, to help
  * identify the fundamental pitch.
+ *
+ *
+ * By downscaling, we fold higher harmonics onto the fundamental. By taking
+ * successive products, we (hopefully) guarantee that the fundamental is the
+ * largest peak in the final product spectrum.
+ *
+ * @see http://musicweb.ucsd.edu/~trsmyth/analysis/Harmonic_Product_Spectrum.html
  *
  * @param {Uint8Array} data
  * @returns {number[]}
