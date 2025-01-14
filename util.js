@@ -30,6 +30,7 @@ const N_HPS = 5;
  * register
  */
 export const NOTES = {
+  "-": 0.0,
   "C2": 65.406,
   "C#2": 69.296,
   "D2": 73.416,
@@ -119,7 +120,7 @@ export function maxIdx(xs) {
  * @returns {string} The name of the nearest note
  */
 export function nearestNote(freq) {
-  let nearest = "C2";
+  let nearest = "-";
 
   for (let current in NOTES) {
     let dCurrent = Math.abs(NOTES[current] - freq);
@@ -141,7 +142,7 @@ export function nearestNote(freq) {
  * @returns {number} The distance between the pitches in cents
  */
 export function dCents(f1, f2) {
-  return 1200 * Math.log2(f1 / f2);
+  return f2 > 0 ? 1200 * Math.log2(f1 / f2) : 0; 
 }
 
 /**
