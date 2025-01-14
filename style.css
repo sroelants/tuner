@@ -1,0 +1,19 @@
+body {
+  background-color: rgb(241 245 249); 
+  color: rgb(51 65 85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  font-family: sans-serif;
+  font-weight: 700;
+}
+
+#container {
+  text-align: center;
+}
+.note-name {
+  font-size: 120px;
+  margin: 20px;
+}
