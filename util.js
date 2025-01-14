@@ -24,7 +24,7 @@ export const BIN_COUNT = FFT_SIZE / 2;
  * The number of downsampled signals to include in HPS (Harmonic Product
  * Spectrum)
  */
-const N_HPS = 5;
+const N_HPS = 10;
 
 /**
  * A list of pitch names and their associated frequencies
