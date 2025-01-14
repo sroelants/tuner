@@ -1,7 +1,10 @@
 /**
  * The number of samples per second of the input stream
+ *
+ * Create a dummy AudioContext to figure out the machine's sampleRate
+ * It's gross, but whatever.
  */
-export const SAMPLING_RATE = 48000;
+export const SAMPLING_RATE = new AudioContext().sampleRate;
 
 /**
  * The amount of samples used in a single FFT window.

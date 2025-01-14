@@ -1,9 +1,7 @@
 import { Transformer } from "./fft.js";
-import { getFundamental, dCents, nearestNote, SAMPLING_RATE, NOTES } from "./util.js";
+import { getFundamental, dCents, nearestNote, NOTES } from "./util.js";
 
-let stream = await navigator.mediaDevices.getUserMedia({ 
-  audio: { sampleRate: SAMPLING_RATE } 
-});
+let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
 run(stream);
 
