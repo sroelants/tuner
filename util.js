@@ -24,7 +24,7 @@ export const BIN_COUNT = FFT_SIZE / 2;
  * The number of downsampled signals to include in HPS (Harmonic Product
  * Spectrum)
  */
-const N_HPS = 10;
+const N_HPS = 5;
 
 /**
  * A list of pitch names and their associated frequencies
@@ -185,7 +185,7 @@ export function harmonicProductSpectrum(data) {
   // Clear out anything < 50Hz since the HPS creates a bunch of noise in the
   // lower end.
   for (let i = 0; i < hps.length; i++) {
-    if (binToHz(i) < 50) {
+    if (binToHz(i) < 60) {
       hps[i] = 0;
     }
   }
