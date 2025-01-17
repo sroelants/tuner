@@ -1,7 +1,5 @@
 # Tuner
 
-## Description
-
 Use it to tune things.
 
 > [!WARNING]
