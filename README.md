@@ -13,3 +13,10 @@ Use it to tune things.
 - [ ] Zero-pad the input signal to increase the frequency resolution
 - [ ] Add Hamming/Hanning windowing?
 - [ ] Make the UI less jumpy
+
+## Building the project
+The FFT implementation is written in Zig and must be compiled to WASM first:
+
+```sh
+zig build-exe fft.zig -target wasm32-freestanding -fno-entry --export=fft -O ReleaseFast
+```
