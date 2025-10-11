@@ -17,3 +17,9 @@ body {
   font-size: 120px;
   margin: 20px;
 }
+
+canvas {
+  position: absolute;
+  /* opacity: 50%; */
+  z-index: -100;
+}

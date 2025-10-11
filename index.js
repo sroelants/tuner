@@ -1,32 +1,24 @@
-import { Transformer } from "./fft.js";
-import { getFundamental, dCents, nearestNote, NOTES } from "./util.js";
+// Rough steps:
+// - [x] Simple input
+// - [x] Print input (render to canvas?)
+// - [ ] Print additional information?
+// - [ ] Implement simple FFT with WebAudioAPI? (Is that even possible? Or does it require a Stream?)
+// - [ ] Optional: Implement naive DFT?
+// - [ ] Implement simple FFT in Javascript. Make sure we get the correct results
+// - [ ] Render the waveform *and* spectrum side by side, with stats
+// - [ ] Run in loop
+// - [ ] Use AudioStream to write bytes into buffer, instead of fixed signal
+// - [ ] Implement in Zig/Wasm
+//   - [ ] Implementation that simply copies input to output
+//   - [ ] Implementation that performs FFT on input
 
-let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+import { WINDOW_SIZE } from "./util.js";
+const FREQ = 400;
 
-run(stream);
-
-/**
- * Run the tuner on a given input audio stream
- *
- * @param {MediaStream} stream The audio stream to feed to the tuner
- */
-function run(stream) {
-  let container = document.getElementById("container");
-  let transformer = new Transformer(stream);
-
-  function tick() {
-    requestAnimationFrame(tick);
-    let fftData = transformer.fft();
-    let f0 = getFundamental(fftData);
-    let nearestName = nearestNote(f0);
-    let nearestValue = NOTES[nearestName];
-    let cents = dCents(f0, nearestValue);
-    render(container, f0, nearestValue, nearestName, cents);
-  };
-
-  tick();
-}
-
+let container = document.getElementById("container");
+render(container);
+let samples = getSamples();
+renderCanvas(samples);
 
 /**
  * Render the tuner UI
@@ -37,11 +29,41 @@ function run(stream) {
  * @param {string} name
  * @param {number} cents
  */
-export function render(container, f0, nearest, name, cents) {
+export function render(container) {
   container.innerHTML = `
-  <div class="note-name">${name}</div>
-  <div>
-    <span>${f0.toFixed(1)}Hz</span>/${nearest.toFixed(1)}Hz (${cents.toFixed(1)} cts)
-  </div>
+    <div class="note-name">Hello</div>
+    <div>
+      <span>there</span>
+    </div>
   `;
+}
+
+export function getSamples() {
+  const samples = new Float32Array(WINDOW_SIZE);
+
+  for (let i = 0; i < samples.length; i++) {
+    samples[i] = 50 * Math.sin(2 * Math.PI * FREQ * i / WINDOW_SIZE);
+  }
+
+  return samples
+}
+
+/**
+ * Render a buffer of samples to the canvas
+ *
+ * @param {Float32Array} samples The buffer of samples
+ */
+export function renderCanvas(samples) {
+  let ctx = document.getElementById("canvas").getContext("2d");
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
+
+  ctx.beginPath();
+  ctx.moveTo(0, ctx.canvas.height/2);
+
+  for (let i = 0; i < samples.length; i++) {
+    ctx.lineTo(i, ctx.canvas.height/2 + samples[i], 1, 1);
+  }
+
+  ctx.stroke();
 }

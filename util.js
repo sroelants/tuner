@@ -6,12 +6,15 @@
  */
 export const SAMPLING_RATE = new AudioContext().sampleRate;
 
+// export const WINDOW_SIZE = 32;
+export const WINDOW_SIZE = 32 * 1024;
+
 /**
  * The amount of samples used in a single FFT window.
  *
  * This in part determines the frequency resolution.
  */
-export const FFT_SIZE = 32 * 1024;
+export const FFT_SIZE = WINDOW_SIZE
 
 /**
  * The number of actual FFT bins.
