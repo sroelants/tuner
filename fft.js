@@ -30,8 +30,8 @@ export function cooleyTukey(input, output, N, start, stride) {
   let odd  = new Float32Array(2 * N/2);
 
   // FFT both parts separately;
-  cooleyTukey(samples, even, N/2, start,            2 * stride);
-  cooleyTukey(samples, odd,  N/2, start + stride,   2 * stride);
+  cooleyTukey(input, even, N/2, start,            2 * stride);
+  cooleyTukey(input, odd,  N/2, start + stride,   2 * stride);
 
   for (let k = 0; k < N / 2; k += 1) {
     let w = -2 * Math.PI * k / N;
