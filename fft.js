@@ -1,92 +1,53 @@
-import { BIN_COUNT, FFT_SIZE, WINDOW_SIZE } from "./util.js";
+/**
+ * Perform a discrete fourier transform on a buffer of samples
+ *
+ * @param {Float32Array} samples The buffer of samples to transform
+ * @returns Float32Array The buffer of frequency samples
+ */
+export function fft(samples) {
+  let output = new Float32Array(2*samples.length);
+  cooleyTukey(samples, output, samples.length, 0, 1);
 
-const wasm = await WebAssembly.instantiateStreaming(fetch('fft.wasm'));
-const { fft, memory } = wasm.instance.exports;
+  let spectrum = new Float32Array(samples.length);
 
-export class SineSource {
-  SIZE = WINDOW_SIZE;
-
-  /**
-   * @type number
-   */
-  freq = 400;
-
-  /**
-   * Create a new audio source returning a sine signal
-   *
-   * @param {number} freq The sine frequency
-   */
-  constructor(freq) {
-    this.freq = freq;
+  for (let i = 0; i < samples.length; i++) {
+    spectrum[i] = Math.sqrt(output[2*i] ** 2 + output[2*i+1] ** 2);
   }
 
-  /**
-   * Obtain a set of samples from the source
-   *
-   * TODO: Should we pass in an array for it to fill? Or does it store its own
-   * array to fill to save ourselves a copy?
-   *
-   * @returns {Float32Array}
-   */
-  getSamples() {
-    let samples = new Float32Array(this.SIZE);
-
-    for (let i = 0; i < this.SIZE; i++) {
-      samples[i] = Math.sin(2 * Math.PI * this.freq * i / this.SIZE)
-    }
-
-    return samples;
-  }
+  return spectrum;
 }
 
-export class WasmTransformer {
-  /**
-   * @type AudioContext
-   */
-  ctx = new AudioContext();
-
-  /**
-   * @type AnalyserNode
-   */
-  analyzer;
-
-  timeData = new Float32Array(memory.buffer, 0, FFT_SIZE);
-
-  fftOut = new Float32Array(memory.buffer, 4 * FFT_SIZE, 2 * FFT_SIZE);
-
-  freqData = new Float32Array(FFT_SIZE)
-
-  /**
-   * Create a Transformer that can be used to perform FFT on a provided input
-   * stream.
-   *
-   * @param {MediaStream} stream The input stream
-   */
-  constructor(stream) {
-    let source = this.ctx.createMediaStreamSource(stream);
-    this.analyzer = this.ctx.createAnalyser();
-    this.analyzer.fftSize = FFT_SIZE;
-    source.connect(this.analyzer);
+export function cooleyTukey(input, output, N, start, stride) {
+  if (N === 1) {
+    output[0] = input[start];
+    output[1] = 0;
+    return;
   }
 
-  /**
-   * Refresh the time/frequency domain data
-   * 
-   * @returns {Float32Array}
-   */
-  fft() {
-    this.analyzer.getFloatTimeDomainData(this.timeData);
-    fft(this.timeData.byteOffset, this.fftOut.byteOffset, FFT_SIZE);
+  // Otherwise, create an auxiliary Float32Array that we'll use to collect the
+  // subsequent FFT components.
+  let even = new Float32Array(2 * N/2);
+  let odd  = new Float32Array(2 * N/2);
 
-    // Take the norm of each entry
-    for (let i = 0; i < this.freqData.length; i++) {
-      this.freqData[i] = Math.sqrt(this.fftOut[2*i] ** 2 + this.fftOut[2*i+1] ** 2);
-    }
+  // FFT both parts separately;
+  cooleyTukey(samples, even, N/2, start,            2 * stride);
+  cooleyTukey(samples, odd,  N/2, start + stride,   2 * stride);
 
-    // console.log("Time:", this.timeData.slice());
-    // console.log("fft:", this.fftOut.slice());
-    // console.log("Freq:", this.freqData.slice());
+  for (let k = 0; k < N / 2; k += 1) {
+    let w = -2 * Math.PI * k / N;
 
-    return this.freqData;
+    let pr = even[2 * k];
+    let pi = even[2 * k + 1];
+    let qr = Math.cos(w) * odd[2 * k] - Math.sin(w) * odd[2 * k + 1];
+    let qi = Math.sin(w) * odd[2 * k] + Math.cos(w) * odd[2 * k + 1];
+
+    let idx1 = 2 * k;
+    let idx2 = 2 * (k + N / 2);
+
+    output[idx1    ] = pr + qr;
+    output[idx1 + 1] = pi + qi;
+
+    output[idx2    ] = pr - qr;
+    output[idx2 + 1] = pi - qi;
   }
 }

@@ -1,68 +1,44 @@
-// Rough steps:
-// - [x] Simple input
-// - [x] Print input (render to canvas?)
-// - [ ] Print additional information?
-// - [ ] Implement simple FFT with WebAudioAPI? (Is that even possible? Or does it require a Stream?)
-// - [ ] Optional: Implement naive DFT?
-// - [ ] Implement simple FFT in Javascript. Make sure we get the correct results
-// - [ ] Render the waveform *and* spectrum side by side, with stats
-// - [ ] Run in loop
-// - [ ] Use AudioStream to write bytes into buffer, instead of fixed signal
-// - [ ] Implement in Zig/Wasm
-//   - [ ] Implementation that simply copies input to output
-//   - [ ] Implementation that performs FFT on input
-
 import { WINDOW_SIZE } from "./util.js";
-const FREQ = 400;
+import { AudioStreamSource } from "./source.js";
 
-let container = document.getElementById("container");
-render(container);
-let samples = getSamples();
-renderCanvas(samples);
+/** @type {CanvasRenderingContext2D} */
+let ctx = document.getElementById("canvas").getContext("2d");
 
-/**
- * Render the tuner UI
- *
- * @param {HTMLElement} container
- * @param {number} f0
- * @param {number} nearest
- * @param {string} name
- * @param {number} cents
- */
-export function render(container) {
-  container.innerHTML = `
-    <div class="note-name">Hello</div>
-    <div>
-      <span>there</span>
-    </div>
-  `;
+ctx.canvas.width = window.innerWidth;
+ctx.canvas.height = window.innerHeight;
+
+// Get samples
+let samples = new Float32Array(WINDOW_SIZE);
+
+let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+let audioSource = AudioStreamSource(stream);
+
+// TODO: Make this rendering a little fancier
+// Render samples
+function tick() {
+  audioSource.getSamples(samples);
+  let spectrum = fft(samples);
+
+  ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+  renderCanvas(samples, 0.25, 1000);
+  renderCanvas(spectrum, 0.75, 1);
+
+  requestAnimationFrame(tick)
 }
 
-export function getSamples() {
-  const samples = new Float32Array(WINDOW_SIZE);
-
-  for (let i = 0; i < samples.length; i++) {
-    samples[i] = 50 * Math.sin(2 * Math.PI * FREQ * i / WINDOW_SIZE);
-  }
-
-  return samples
-}
+requestAnimationFrame(tick);
 
 /**
  * Render a buffer of samples to the canvas
  *
  * @param {Float32Array} samples The buffer of samples
  */
-export function renderCanvas(samples) {
-  let ctx = document.getElementById("canvas").getContext("2d");
-  ctx.canvas.width = window.innerWidth;
-  ctx.canvas.height = window.innerHeight;
-
+export function renderCanvas(samples, height, scale) {
   ctx.beginPath();
-  ctx.moveTo(0, ctx.canvas.height/2);
+  ctx.moveTo(0, height*ctx.canvas.height);
 
-  for (let i = 0; i < samples.length; i++) {
-    ctx.lineTo(i, ctx.canvas.height/2 + samples[i], 1, 1);
+  for (let i = 0; i < samples.length / 16; i++) {
+    ctx.lineTo(i, height * ctx.canvas.height - scale * samples[i], 1, 1);
   }
 
   ctx.stroke();
