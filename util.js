@@ -118,7 +118,6 @@ export function maxIdx(xs) {
   return maxIdx;
 }
 
-
 /**
  * Find the note nearest to the provided frequency
  *
@@ -165,7 +164,6 @@ export function binToHz(bin) {
  * Transform an array of FFT data into its Harmonic Product Spectrum, to help
  * identify the fundamental pitch.
  *
- *
  * By downscaling, we fold higher harmonics onto the fundamental. By taking
  * successive products, we (hopefully) guarantee that the fundamental is the
  * largest peak in the final product spectrum.
@@ -205,4 +203,103 @@ export function harmonicProductSpectrum(data) {
 export function getFundamental(data) {
   let idx = maxIdx(harmonicProductSpectrum(data));
   return binToHz(idx);
+}
+
+/** @typedef {Object} Rect
+ *  @property {number} x1
+ *  @property {number} y1
+ *  @property {number} x2
+ *  @property {number} y2
+ */
+
+/**
+ * Get the width of a rectangle
+ * @param {Rect} The rectangle whose width we want
+ * @returns {number} The width of the rectangle
+ */
+export function width(rect) {
+  return rect.x2 - rect.x1;
+}
+
+/**
+ * Get the height of a rectangle
+ * @param {Rect} The rectangle whose height we want
+ * @returns {number} The height of the rectangle
+ */
+export function height(rect) {
+  return rect.y2 - rect.y1;
+}
+
+/**
+ * Split a given rectangle vertically into two rectangles, according to the
+ * desired ratio.
+ *
+ * @param {Rect} rect - The rectangle to split
+ * @returns {[Rect, Rect]} - Two sub-rectangles
+ */
+export function vsplit(rect, frac) {
+  let ySplit = rect.y1 + frac * height(rect);
+  return [{ ...rect, y2: ySplit}, {...rect, y1: ySplit}];
+}
+
+/**
+ * Split a given rectangle horizontally into two rectangles, according to the
+ * desired ratio.
+ *
+ * @param {Rect} rect - The rectangle to split
+ * @returns {[Rect, Rect]} - Two sub-rectangles
+ */
+export function hsplit(rect, frac) {
+  let xSplit = rect.x1 + frac * width(rect);
+  return [{ ...rect, x2: xSplit }, { ...rect, x1: xSplit }];
+}
+
+/**
+ * Pad a rectangle with the desired padding
+ *
+ * @param {Rect} rect - The rectangle to pad
+ * @param {number} padding - The desired padding
+ * @returns {Rect} The padded rectangle
+ */
+export function pad(rect, padding) {
+  return {
+    x1: rect.x1 + padding,
+    y1: rect.y1 + padding,
+    x2: rect.x2 - padding,
+    y2: rect.y2 - padding,
+  };
+}
+
+export function drawFrame(ctx, rect) {
+  ctx.strokeRect(rect.x1, rect.y1, width(rect), height(rect));
+}
+
+export function render(ctx, rect, samples, opts = {}) {
+  let { scale = 1, align ="bottom" } = opts;
+
+  ctx.beginPath();
+
+  let yStart = align === "center" ? (rect.y1 + rect.y2) / 2
+      : align === "top"           ? rect.y1
+      : rect.y2;
+
+  ctx.moveTo(rect.x1, yStart);
+
+  for (let i = 0; i < samples.length; i++) {
+    let x = rect.x1 + i / samples.length * width(rect);
+    let y = align === "bottom"
+        ? clamp(yStart - scale * samples[i], rect.y1, rect.y2)
+        : clamp(yStart + scale * samples[i], rect.y1, rect.y2);
+    ctx.lineTo(x, y, 1, 1);
+  }
+
+  ctx.stroke();
+}
+
+export function label(ctx, rect, label) {
+  ctx.fillText(label, rect.x1, rect.y1 - 5);
+}
+
+export function clamp(value, min, max) {
+  return Math.max(Math.min(value, max), min);
 }

@@ -1,66 +1,112 @@
-const PADDING = 10;
+// TODO:
+// - Render an FPS?
+// - Render the spectral peak
+// - Render the HPS peak
+//
+// Ideally, we want to have a couple of geometry primitives here
+// - A `Rect` primitive
+// - A way to get padded `Rect`s from other rects
+// - A way to split up rects
+// - A way to render a set of samples _inside_ a rect (Take care of all the clamping, etc...)
+// - A way to render tics on a rect
+//
+// That way, we could just define the graph like:
+// "Take the canvas, split it 30/70, render the audio in the first rect, render
+// the spectrum in the second. Then add some ticks to the second"
+//
+// TODO:
+// - Render an FPS?
+// - Render the spectral peak
+// - Render the HPS peak
+//
+// Ideally, we want to have a couple of geometry primitives here
+// - A `Rect` primitive
+// - A way to get padded `Rect`s from other rects
+// - A way to split up rects
+// - A way to render a set of samples _inside_ a rect (Take care of all the clamping, etc...)
+// - A way to render tics on a rect
+//
+// That way, we could just define the graph like:
+// "Take the canvas, split it 30/70, render the audio in the first rect, render
+// the spectrum in the second. Then add some ticks to the second"
+//
+// # Robust pitch detection
+// Looking at the spectral peak can be fragile: sometimes the fundamental can get overshadowed by harmonics
+//
+// Other methods:
+// 1. Harmonic product spectrum
+//   - If there's a peak at 1/2 of the maximum frequency, *and* the magnitude is
+//     on the order of the max peak, then pick that one instead
+// 2. Cepstrum analysis
+// 3. Modulate with "likelihood" windows
+// 4. Manually look for peaks (strong deviations from the average value, points
+//    where the curve changes direction and same magnitude as the max value)
+//
+// Also worth improving the resolution either by zero padding or parabolic/gaussian interpolation around
+// the identified maximum
+
+import { nearestNote, getFundamental, label, width, height, vsplit, pad, drawFrame, render, harmonicProductSpectrum } from "./util.js";
+
+const PADDING = 20;
+
+/** @import { Rect } from "./util.js" */
+
+/** @type {Rect} */
+const CANVAS = { x1: 0, y1: 0, x2: 800, y2: 600 };
 
 /** @type {CanvasRenderingContext2D} */
 let ctx = document.getElementById("canvas").getContext("2d");
+ctx.canvas.width = width(CANVAS);
+ctx.canvas.height = height(CANVAS);
 
-ctx.canvas.width = 800
-ctx.canvas.height = 400;
 
-export function renderDebugInfo(samples, spectrum) {
-  ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+/**
+ * Render debug information
+ *
+ * @param {Float32Array} samples - The audio signal
+ * @param {Float32Array} spectrum - The frequency spectrum
+ * @param {number} dt - The time interval since the last frame
+ */
+export function renderDebugInfo(samples, spectrum, dt) {
+  ctx.clearRect(CANVAS.x1, CANVAS.y1, width(CANVAS), height(CANVAS));
 
-  // Render samples
-  const SAMPLES_X1 = 0 + PADDING;
-  const SAMPLES_Y1 = 0 + PADDING;
-  const SAMPLES_X2 = ctx.canvas.width - PADDING;
-  const SAMPLES_Y2 = ctx.canvas.height / 2 - PADDING;
-  const SAMPLES_WIDTH = SAMPLES_X2 - SAMPLES_X1;
-  const SAMPLES_HEIGHT = SAMPLES_Y2 - SAMPLES_Y1;
-  const MID_Y = (SAMPLES_Y1 + SAMPLES_Y2)/2;
-  const SCALE = 500;
+  let fps = 1000/dt;
 
-  ctx.strokeRect(SAMPLES_X1, SAMPLES_Y1, SAMPLES_WIDTH, SAMPLES_HEIGHT);
-
-  ctx.beginPath();
-  ctx.moveTo(SAMPLES_X1, MID_Y);
-
-  for (let i = 0; i < samples.length; i++) {
-    let x = SAMPLES_X1 + i / samples.length * SAMPLES_WIDTH
-    let y = clamp(MID_Y + SCALE * samples[i], SAMPLES_Y1, SAMPLES_Y2);
-    ctx.lineTo(x, y, 1, 1);
-  }
-  // ctx.closePath();
-  ctx.stroke();
-
+  let [samplesRect, spectraRect] = vsplit(CANVAS, 0.33);
+  let [spectrumRect, hpsRect] = vsplit(spectraRect, 0.5);
 
   // Render samples
-  const SPECTRUM_X1 = 0 + PADDING;
-  const SPECTRUM_Y1 = ctx.canvas.height / 2 + PADDING;
-  const SPECTRUM_X2 = ctx.canvas.width - PADDING;
-  const SPECTRUM_Y2 = ctx.canvas.height - PADDING;
-  const SPECTRUM_WIDTH = SPECTRUM_X2 - SPECTRUM_X1;
-  const SPECTRUM_HEIGHT = SPECTRUM_Y2 - SPECTRUM_Y1;
-  const SPECTRUM_LEN = spectrum.length / 16;
+  samplesRect = pad(samplesRect, PADDING);
+  drawFrame(ctx, samplesRect);
+  label(ctx, samplesRect, "Audio");
+  render(ctx, samplesRect, samples, { scale: 200, align: "center" });
 
-  ctx.strokeRect(SPECTRUM_X1, SPECTRUM_Y1, SPECTRUM_WIDTH, SPECTRUM_HEIGHT);
+  let bins = spectrum.length / 16;
 
-  ctx.beginPath();
-  ctx.moveTo(SPECTRUM_X1, SPECTRUM_Y2);
+  // Render spectrum (Only the first chunk)
+  spectrumRect = pad(spectrumRect, PADDING);
+  drawFrame(ctx, spectrumRect);
+  label(ctx, spectrumRect, "Spectrum");
+  render(ctx, spectrumRect, spectrum.slice(0, bins), { scale: 0.5 });
 
+  // Render hps (Only the first chunk)
+  let hps = harmonicProductSpectrum(spectrum);
+  hpsRect = pad(hpsRect, PADDING);
+  drawFrame(ctx, hpsRect);
+  label(ctx, hpsRect, "Harmonic Product");
+  render(ctx, hpsRect, hps.slice(0, bins), { scale: 0.00001 });
 
-  for (let i = 0; i < SPECTRUM_LEN; i++) {
-    let x = SPECTRUM_X1 + i / SPECTRUM_LEN * SPECTRUM_WIDTH
-    let y = clamp(SPECTRUM_Y2 - spectrum[i], SPECTRUM_Y1, SPECTRUM_Y2);
-    ctx.lineTo(x, y, 1, 1);
+  let spectralMaxIdx = 0;
+
+  for (let i = 0; i < spectrum.length; i++) {
+    if (spectrum[i] > spectrum[spectralMaxIdx]) {
+      spectralMaxIdx = i;
+    }
   }
 
-  ctx.stroke();
+  let fSpectrum = getFundamental(spectrum);
+  let fHps = getFundamental(hps);
 
-  // Render spectrum tics (toggle between regular tics and notes?)
-  // Add (render) spectrum peak
-  // Add (render) HPS peak
-}
-
-function clamp(value, min, max) {
-  return Math.max(Math.min(value, max), min);
+  // Render extra info
+  ctx.fillText(`FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)} (${nearestNote(fHps)})`, CANVAS.x1, CANVAS.y2 - 5);
 }
