@@ -44,33 +44,41 @@
 //
 // Also worth improving the resolution either by zero padding or parabolic/gaussian interpolation around
 // the identified maximum
+//
+// Also, worth just returning undefined if the maximal spectral value is below some cutoff
+// (or the volume is below some cutoff?)
 
-import { nearestNote, getFundamental, label, width, height, vsplit, pad, drawFrame, render, harmonicProductSpectrum } from "./util.js";
+import {
+  drawMax,
+  nearestNote,
+  getFundamental,
+  label,
+  width,
+  height,
+  vsplit,
+  pad,
+  drawFrame,
+  render,
+  harmonicProductSpectrum,
+} from "./util.js";
 
 const PADDING = 20;
 
-/** @import { Rect } from "./util.js" */
-
 /** @type {Rect} */
-const CANVAS = { x1: 0, y1: 0, x2: 800, y2: 600 };
-
-/** @type {CanvasRenderingContext2D} */
-let ctx = document.getElementById("canvas").getContext("2d");
-ctx.canvas.width = width(CANVAS);
-ctx.canvas.height = height(CANVAS);
-
+export const CANVAS = { x1: 0, y1: 0, x2: 800, y2: 600 };
 
 /**
  * Render debug information
  *
+ * @param {CanvasRenderingContext2D} ctx
  * @param {Float32Array} samples - The audio signal
  * @param {Float32Array} spectrum - The frequency spectrum
  * @param {number} dt - The time interval since the last frame
  */
-export function renderDebugInfo(samples, spectrum, dt) {
-  ctx.clearRect(CANVAS.x1, CANVAS.y1, width(CANVAS), height(CANVAS));
+export function renderDebugInfo(ctx, samples, spectrum, dt) {
+  clearCanvas(ctx);
 
-  let fps = 1000/dt;
+  let fps = 1000 / dt;
 
   let [samplesRect, spectraRect] = vsplit(CANVAS, 0.33);
   let [spectrumRect, hpsRect] = vsplit(spectraRect, 0.5);
@@ -88,6 +96,7 @@ export function renderDebugInfo(samples, spectrum, dt) {
   drawFrame(ctx, spectrumRect);
   label(ctx, spectrumRect, "Spectrum");
   render(ctx, spectrumRect, spectrum.slice(0, bins), { scale: 0.5 });
+  drawMax(ctx, spectrumRect, spectrum.slice(0, bins));
 
   // Render hps (Only the first chunk)
   let hps = harmonicProductSpectrum(spectrum);
@@ -95,6 +104,7 @@ export function renderDebugInfo(samples, spectrum, dt) {
   drawFrame(ctx, hpsRect);
   label(ctx, hpsRect, "Harmonic Product");
   render(ctx, hpsRect, hps.slice(0, bins), { scale: 0.00001 });
+  drawMax(ctx, hpsRect, hps.slice(0, bins));
 
   let spectralMaxIdx = 0;
 
@@ -108,5 +118,58 @@ export function renderDebugInfo(samples, spectrum, dt) {
   let fHps = getFundamental(hps);
 
   // Render extra info
-  ctx.fillText(`FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)} (${nearestNote(fHps)})`, CANVAS.x1, CANVAS.y2 - 5);
+  ctx.fillText(
+    `FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)} (${nearestNote(fHps)})`,
+    CANVAS.x1,
+    CANVAS.y2,
+  );
+}
+
+export function clearCanvas(ctx) {
+  ctx.clearRect(CANVAS.x1, CANVAS.y1, width(CANVAS), height(CANVAS));
+}
+
+class Plot {
+  /** @type {HTMLDivElement} */
+  container = document.createElement("div");
+  /** @type {HTMLCanvasElement} */
+  canvas = document.createElement("canvas");
+  /** @type {CanvasRenderingContext2D} */
+  ctx = this.canvas.getContext("2d");
+  /** @type {number} */
+  width = 800;
+  /** @type {number} */
+  height = 300;
+  /** @type {number} */
+  scaleX = 1;
+  /** @type {number} */
+  scaleY = 1;
+  /** @type {number} */
+  minY = 0;
+  /** @type {number} */
+  maxY = 1;
+  /** @type {"top" | "center" | "bottom"} */
+  align = "bottom";
+
+  /** @type {Iterable<number>} */
+  data = [];
+
+  /**
+   * @param {Object} params
+   * @param {number} [params.width]
+   * @param {number} [params.height]
+   */
+  constructor(params) {
+    this.container.className = "plot";
+    this.width = params.width ?? this.width;
+    this.height = params.height ?? this.height;
+  }
+
+  label(l) {
+    this.label = l;
+  }
+
+  render() {
+    ctx.strokeRect(0, 9, this.width, this.height);
+  }
 }

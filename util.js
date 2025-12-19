@@ -195,13 +195,13 @@ export function harmonicProductSpectrum(data) {
 }
 
 /**
- * Given an array of FFT data, find the fundamental pitch.
+ * Given an array of spectral data, find the fundamental pitch.
  *
  * @param {Uint8Array} data
  * @returns {number} The fundamental pitch in Hz
  */
 export function getFundamental(data) {
-  let idx = maxIdx(harmonicProductSpectrum(data));
+  let idx = maxIdx(data);
   return binToHz(idx);
 }
 
@@ -302,4 +302,29 @@ export function label(ctx, rect, label) {
 
 export function clamp(value, min, max) {
   return Math.max(Math.min(value, max), min);
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ */
+export function line(ctx, rect, x, label) {
+  ctx.save();
+  ctx.fillStyle = "red";
+  ctx.strokeStyle = "red";
+
+  ctx.fillText(label, rect.x1 + x, rect.y2 + 10)
+
+  ctx.beginPath();
+  ctx.moveTo(rect.x1 + x, rect.y2);
+  ctx.lineTo(rect.x1 + x, rect.y1);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export function drawMax(ctx, rect, data) {
+  let idx = maxIdx(data);
+  let max = binToHz(idx).toFixed(2);
+  let x = idx / data.length * width(rect);
+  line(ctx, rect, x, `${max}`);
 }
