@@ -119,14 +119,14 @@ export function renderDebugInfo(ctx, samples, spectrum, dt) {
 
   // Render extra info
   ctx.fillText(
-    `FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)} (${nearestNote(fHps)})`,
+    `FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)[0]} (${nearestNote(fHps)}[0])`,
     CANVAS.x1,
     CANVAS.y2,
   );
 }
 
 export function clearCanvas(ctx) {
-  ctx.clearRect(CANVAS.x1, CANVAS.y1, width(CANVAS), height(CANVAS));
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 class Plot {

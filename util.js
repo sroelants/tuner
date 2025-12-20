@@ -136,7 +136,7 @@ export function nearestNote(freq) {
     }
   }
 
-  return nearest;
+  return [nearest, NOTES[nearest]];
 }
 
 /**
@@ -147,7 +147,8 @@ export function nearestNote(freq) {
  * @returns {number} The distance between the pitches in cents
  */
 export function dCents(f1, f2) {
-  return f2 > 0 ? 1200 * Math.log2(f1 / f2) : 0; 
+  let cents = f2 > 0 ? 1200 * Math.log2(f1 / f2) : 0;
+  return clamp(cents, -50, 50);
 }
 
 /**
@@ -267,6 +268,13 @@ export function pad(rect, padding) {
     y1: rect.y1 + padding,
     x2: rect.x2 - padding,
     y2: rect.y2 - padding,
+  };
+}
+
+export function center(rect) {
+  return {
+    x: (rect.x2 + rect.x1) / 2,
+    y: (rect.y2 + rect.y1) / 2,
   };
 }
 
