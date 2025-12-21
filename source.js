@@ -1,4 +1,12 @@
 /**
+ * The number of samples per second of the input stream
+ *
+ * Create a dummy AudioContext to figure out the machine's sampleRate
+ * It's gross, but whatever.
+ */
+export const SAMPLING_RATE = new AudioContext().sampleRate;
+
+/**
  * A general interface for a waveform source that knows how to provide samples of its waveform.
  *
  * @typedef {Object} Source

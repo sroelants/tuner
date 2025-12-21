@@ -1,7 +1,7 @@
 import { clamp } from "./math.js";
-import { N_SAMPLES } from "./source.js";
+import { N_SAMPLES, SAMPLING_RATE } from "./source.js";
 
-export const WINDOW_SIZE = 32 * 1024; //32 * 1024;
+export const WINDOW_SIZE = 64 * 1024;
 
 /**
  * The number of actual FFT bins.
@@ -9,14 +9,6 @@ export const WINDOW_SIZE = 32 * 1024; //32 * 1024;
  * For real-valued functions, we only need half of the Fourier coefficients.
  */
 export const BIN_COUNT = WINDOW_SIZE / 2;
-
-/**
- * The number of samples per second of the input stream
- *
- * Create a dummy AudioContext to figure out the machine's sampleRate
- * It's gross, but whatever.
- */
-export const SAMPLING_RATE = new AudioContext().sampleRate;
 
 /**
  * Perform a discrete fourier transform on a buffer of samples
@@ -287,7 +279,7 @@ function hann(data) {
 /**
  * Apply a Blackman-Harris-Nutall window to the provided data
  *
- * Has better spectral behavior than Hann window when performing peak interpolation
+ * Has better spectral behavior than Hann window when performing gaussian interpolation
  *
  * @param {Float32Array} data - The data to window
  */
