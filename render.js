@@ -3,6 +3,7 @@ import { N_SAMPLES } from "./source.js";
 import { clamp, center, vsplit, pad, width, height } from "./math.js";
 import { maxIdx, harmonicProductSpectrum, binToHz, findPitch, nearestNote, dCents, interpolate, findSubharmonic } from "./analysis.js";
 const PADDING = 20;
+const SIGNAL_THRESHOLD = 10;
 
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
@@ -134,7 +135,7 @@ export function renderDebugInfo(samples, spectrum, dt) {
 
 
   // Don't attempt to render spectral data unless there's an appreciable signal
-  if (max < 10) {
+  if (max < SIGNAL_THRESHOLD) {
     return;
   }
 
@@ -165,6 +166,8 @@ export function renderDebugInfo(samples, spectrum, dt) {
 
 }
 
+const smoothPitch = smooth(findPitch);
+
 /**
  * Given the provided spectrum data, render the default tuner UI
  *
@@ -188,7 +191,7 @@ export function renderTuner(spectrum) {
   let max = spectrum[idx];
 
   // Only render actual tuning stuff if there's an appreciable signal
-  if (max < 25) {
+  if (max < SIGNAL_THRESHOLD) {
     ctx.fillStyle = "#99a1af";
     let textSize = ctx.measureText(placeholder);
 
@@ -203,7 +206,7 @@ export function renderTuner(spectrum) {
   }
 
   let hps = harmonicProductSpectrum(spectrum);
-  let pitch = findPitch(hps);
+  let pitch = smoothPitch(hps);
 
   let [nearestName, nearestPitch] = nearestNote(pitch);
   let cents = dCents(pitch, nearestPitch);
@@ -223,4 +226,29 @@ export function renderTuner(spectrum) {
   ctx.fill();
 
   ctx.restore();
+}
+
+/**
+ * Return a "smoothed" version of the provided function that washes out any jitter
+ * by returning a running average.
+ *
+ * @param {(x: T) => number} callback - The function to smoothen
+ * @param {number} t - The weight to use in the runnnig average
+ * @returns {(x: T) => number} The smoothed callback
+ */
+function smooth(callback, t = 0.1) {
+  let prev = 0;
+
+  return (x) => {
+    let val = callback(x);
+    let diff = Math.abs(val - prev) / ((val + prev) / 2);
+
+    // If the difference between the new value and the previous one is
+    // appreciable, simply jump to the new value
+    if (diff > 0.1) {
+      return prev = val;
+    }
+
+    return prev = (1 - t) * prev + t * val;
+  }
 }

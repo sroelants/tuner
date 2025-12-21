@@ -1,7 +1,7 @@
 import { clamp } from "./math.js";
 import { N_SAMPLES } from "./source.js";
 
-export const WINDOW_SIZE = 64 * 1024; //32 * 1024;
+export const WINDOW_SIZE = 32 * 1024; //32 * 1024;
 
 /**
  * The number of actual FFT bins.
@@ -233,7 +233,7 @@ export function findSubharmonic(data, peak) {
 
   for (let idx = window[0]; idx < window[1]; idx++) {
     let isPeak = data[idx-1] < reference && reference > data[idx+1];
-    let isLarge = data[idx] / reference > 0.5;
+    let isLarge = data[idx] / reference > 0.2;
 
     if (isPeak && isLarge) {
       return idx;
@@ -300,5 +300,4 @@ function bhn(data) {
       0.144232 * Math.cos(4 * Math.PI * (i / N - 0.5)) +
       0.012604 * Math.cos(6 * Math.PI * (i / N - 0.5));
   }
-
 }
