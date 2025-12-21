@@ -11,7 +11,7 @@
  *
  * This in part determines the frequency resolution.
  */
-export const N_SAMPLES = 8 * 1024;
+export const N_SAMPLES = 32 * 1024;
 
 
 /**
