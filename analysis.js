@@ -1,4 +1,5 @@
 import { clamp } from "./math.js";
+import { N_SAMPLES } from "./source.js";
 
 export const WINDOW_SIZE = 64 * 1024; //32 * 1024;
 
@@ -24,6 +25,7 @@ export const SAMPLING_RATE = new AudioContext().sampleRate;
  * @returns Float32Array The buffer of frequency samples
  */
 export function fft(samples) {
+  hann(samples, 0, N_SAMPLES)
   let output = new Float32Array(2*samples.length);
   cooleyTukey(samples, output, samples.length, 0, 1);
 
@@ -316,4 +318,19 @@ export function findPitch(data) {
  */
 export function binToHz(bin) {
   return (bin / BIN_COUNT) * (SAMPLING_RATE / 2);
+}
+
+/**
+ * Apply a Hann window to the provided data
+ *
+ * @param {Float32Array} data - The data to window
+ * @param {number} start - The index where the window begins
+ * @param {number} end - The index where the window ends
+ */
+function hann(data, start, end) {
+  let N = end - start;
+
+  for (let i = start; i <= end; i++) {
+    data[i] *= 0.5 - 0.5*Math.cos(2 * Math.PI * i / N)
+  }
 }
