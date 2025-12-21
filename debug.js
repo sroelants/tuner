@@ -49,17 +49,23 @@
 // (or the volume is below some cutoff?)
 
 import {
+  maxIdx,
+  lineAt,
   drawMax,
   nearestNote,
+  binToHz,
+  findPitch,
   getFundamental,
+  findSubharmonic,
   label,
-  width,
-  height,
   vsplit,
   pad,
   drawFrame,
   render,
   harmonicProductSpectrum,
+  drawFundamental,
+  interpolate,
+  N_SAMPLES,
 } from "./util.js";
 
 const PADDING = 20;
@@ -84,42 +90,53 @@ export function renderDebugInfo(ctx, samples, spectrum, dt) {
   let [spectrumRect, hpsRect] = vsplit(spectraRect, 0.5);
 
   // Render samples
-  samplesRect = pad(samplesRect, PADDING);
-  drawFrame(ctx, samplesRect);
-  label(ctx, samplesRect, "Audio");
-  render(ctx, samplesRect, samples, { scale: 200, align: "center" });
+  {
+    samplesRect = pad(samplesRect, PADDING);
+    drawFrame(ctx, samplesRect);
+    label(ctx, samplesRect, "Audio");
+    render(ctx, samplesRect, samples.slice(0, N_SAMPLES ), { scale: 200, align: "center" });
+  }
 
   let bins = spectrum.length / 16;
 
   // Render spectrum (Only the first chunk)
-  spectrumRect = pad(spectrumRect, PADDING);
-  drawFrame(ctx, spectrumRect);
-  label(ctx, spectrumRect, "Spectrum");
-  render(ctx, spectrumRect, spectrum.slice(0, bins), { scale: 0.5 });
-  drawMax(ctx, spectrumRect, spectrum.slice(0, bins));
+  {
+    let rect = pad(spectrumRect, PADDING);
+    let data = spectrum.slice(0, bins);
+    drawFrame(ctx, rect);
+    label(ctx, rect, "Spectrum");
+    render(ctx, rect, data, { scale: 0.5 });
+
+    let max = maxIdx(data);
+    lineAt(ctx, rect, data, max, "red");
+
+    let f0 = interpolate(data, findSubharmonic(data, max));
+    lineAt(ctx, rect, data, f0, "blue");
+  }
 
   // Render hps (Only the first chunk)
   let hps = harmonicProductSpectrum(spectrum);
-  hpsRect = pad(hpsRect, PADDING);
-  drawFrame(ctx, hpsRect);
-  label(ctx, hpsRect, "Harmonic Product");
-  render(ctx, hpsRect, hps.slice(0, bins), { scale: 0.00001 });
-  drawMax(ctx, hpsRect, hps.slice(0, bins));
 
-  let spectralMaxIdx = 0;
+  {
+    let rect = pad(hpsRect, PADDING);
+    let data = hps.slice(0, bins);
+    drawFrame(ctx, rect);
+    label(ctx, rect, "Harmonic Product");
+    render(ctx, rect, data, { scale: 0.00001 });
 
-  for (let i = 0; i < spectrum.length; i++) {
-    if (spectrum[i] > spectrum[spectralMaxIdx]) {
-      spectralMaxIdx = i;
-    }
+    let max = maxIdx(data);
+    lineAt(ctx, rect, data, max, "red");
+
+    let f0 = interpolate(data, findSubharmonic(data, max));
+    lineAt(ctx, rect, data, f0, "blue");
   }
 
-  let fSpectrum = getFundamental(spectrum);
-  let fHps = getFundamental(hps);
+  let fSpectrum = binToHz(findPitch(spectrum));
+  let fHps = binToHz(findPitch(hps));
 
   // Render extra info
   ctx.fillText(
-    `FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)[0]} (${nearestNote(fHps)}[0])`,
+    `FPS: ${fps.toFixed(0)}, f0: ${fSpectrum.toFixed(2)}, f0 (hps): ${fHps.toFixed(2)}, note: ${nearestNote(fSpectrum)[0]} (${nearestNote(fHps)[0]})`,
     CANVAS.x1,
     CANVAS.y2,
   );

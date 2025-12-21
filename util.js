@@ -6,22 +6,23 @@
  */
 export const SAMPLING_RATE = new AudioContext().sampleRate;
 
-// export const WINDOW_SIZE = 32;
-export const WINDOW_SIZE = 32 * 1024; //32 * 1024;
+export const N_SAMPLES = 32 * 1024;
 
 /**
  * The amount of samples used in a single FFT window.
  *
  * This in part determines the frequency resolution.
  */
-export const FFT_SIZE = WINDOW_SIZE
+export const FFT_SIZE = N_SAMPLES;
+
+export const WINDOW_SIZE = 64 * 1024; //32 * 1024;
 
 /**
  * The number of actual FFT bins.
  *
  * For real-valued functions, we only need half of the Fourier coefficients.
  */
-export const BIN_COUNT = FFT_SIZE / 2;
+export const BIN_COUNT = WINDOW_SIZE;
 
 /**
  * The number of downsampled signals to include in HPS (Harmonic Product
@@ -122,7 +123,7 @@ export function maxIdx(xs) {
  * Find the note nearest to the provided frequency
  *
  * @param {number} freq The frequency to quantize to the nearest note
- * @returns {string} The name of the nearest note
+ * @returns {[string, number]} The name of the nearest note
  */
 export function nearestNote(freq) {
   let nearest = "-";
@@ -315,10 +316,10 @@ export function clamp(value, min, max) {
 /**
  * @param {CanvasRenderingContext2D} ctx
  */
-export function line(ctx, rect, x, label) {
+export function line(ctx, rect, x, label, color = "red") {
   ctx.save();
-  ctx.fillStyle = "red";
-  ctx.strokeStyle = "red";
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
 
   ctx.fillText(label, rect.x1 + x, rect.y2 + 10)
 
@@ -330,9 +331,70 @@ export function line(ctx, rect, x, label) {
   ctx.restore();
 }
 
+export function lineAt(ctx, rect, data, idx, color = "red") {
+  let freq = binToHz(idx).toFixed(2);
+  let x = idx / data.length * width(rect);
+  line(ctx, rect, x, `${freq}`, color);
+}
+
 export function drawMax(ctx, rect, data) {
-  let idx = maxIdx(data);
+  let peak = maxIdx(data);
+  let idx = interpolate(data, peak)
   let max = binToHz(idx).toFixed(2);
   let x = idx / data.length * width(rect);
   line(ctx, rect, x, `${max}`);
+}
+
+export function drawFundamental(ctx, rect, data) {
+  let idx = findPitch(data);
+  let max = binToHz(idx).toFixed(2);
+  let x = idx / data.length * width(rect);
+  line(ctx, rect, x, `${max}`, "blue");
+}
+
+/**
+ * Given an array of data, and the index of the maximal value, perform a parabolic
+ * interpolation to get an interpolated value that approximates the true maximum.
+ *
+ * @param {Float32Array} data - The data to interpolate
+ * @param {number} idx - The index to interpolate around;
+ */
+export function interpolate(data, idx) {
+  let x1 = idx - 1;
+  let x2 = idx;
+  let x3 = idx + 1;
+  let y1 = data[x1];
+  let y2 = data[x2];
+  let y3 = data[x3];
+
+  return x2 + 0.5 * ((y1 - y2) * (x3 - x2)**2 - (y3 - y2) * (x2 - x1)**2) /
+                    ((y1 - y2) * (x3 - x2)    + (y3 - y2) * (x2 - x1))
+}
+
+export function findPitch(data) {
+  let pitch = maxIdx(data);
+  pitch = findSubharmonic(data, pitch);
+  pitch = interpolate(data, pitch);
+  return pitch;
+}
+
+export function findSubharmonic(data, peak) {
+  let reference = data[peak];
+  let estimate = Math.round(peak / 2);
+
+  let window = [
+    Math.max(estimate - 10, 1),
+    estimate + 10
+  ];
+
+  for (let idx = window[0]; idx < window[1]; idx++) {
+    let isPeak = data[idx-1] < reference && reference > data[idx+1];
+    let isLarge = data[idx] / reference > 0.5;
+
+    if (isPeak && isLarge) {
+      return idx;
+    }
+  }
+
+  return peak;
 }

@@ -1,5 +1,5 @@
 import { fft } from "./fft.js";
-import { getFundamental, harmonicProductSpectrum, nearestNote, maxIdx, WINDOW_SIZE, width, height, center, dCents } from "./util.js";
+import { harmonicProductSpectrum, nearestNote, maxIdx, WINDOW_SIZE, width, height, center, dCents, interpolate, binToHz, findPitch } from "./util.js";
 import { AudioStreamSource } from "./source.js";
 import { CANVAS, clearCanvas, renderDebugInfo } from "./debug.js";
 
@@ -14,6 +14,7 @@ let renderDebug = false;
 
 // Get samples
 let samples = new Float32Array(WINDOW_SIZE);
+console.log(`Resolution: ${binToHz(1).toFixed(2)}Hz`);
 
 let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 let audioSource = AudioStreamSource(stream);
@@ -43,16 +44,15 @@ function renderTuner(spectrum) {
   let idx = maxIdx(spectrum);
   let max = spectrum[idx];
 
-  if (max < 50) {
+  if (max < 75) {
     return;
   }
 
   let hps = harmonicProductSpectrum(spectrum);
-  let pitch = getFundamental(hps);
+  let pitch = binToHz(findPitch(hps));
+
   let [nearestName, nearestPitch] = nearestNote(pitch);
-
   let cents = dCents(pitch, nearestPitch);
-
 
   ctx.fillStyle = Math.abs(cents) < 10 ?  "rgb(56 178 172)" : "rgb(51 65 85)";
   ctx.strokeStyle = "rgb(51 65 85)";
