@@ -25,7 +25,7 @@ export const SAMPLING_RATE = new AudioContext().sampleRate;
  * @returns Float32Array The buffer of frequency samples
  */
 export function fft(samples) {
-  hann(samples, 0, N_SAMPLES)
+  hann(new Float32Array(samples.buffer, 0, N_SAMPLES));
   let output = new Float32Array(2*samples.length);
   cooleyTukey(samples, output, samples.length, 0, 1);
 
@@ -261,13 +261,11 @@ export function binToHz(bin) {
  * Apply a Hann window to the provided data
  *
  * @param {Float32Array} data - The data to window
- * @param {number} start - The index where the window begins
- * @param {number} end - The index where the window ends
  */
-function hann(data, start, end) {
-  let N = end - start;
+function hann(data) {
+  let N = data.length;
 
-  for (let i = start; i <= end; i++) {
+  for (let i = 0; i < N; i++) {
     data[i] *= 0.5 - 0.5*Math.cos(2 * Math.PI * i / N)
   }
 }
