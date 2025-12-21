@@ -82,76 +82,46 @@ export function cooleyTukey(input, output, N, start, stride) {
   }
 }
 
+const NAMES = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
+
 /**
- * A list of pitch names and their associated frequencies
+ * Find the note nearest to the provided frequency
  *
- * TODO: Make this a function that can just derive the correct note name and
- * register from a reference pitch (A4 = 440Hz)
+ * @param {number} freq The frequency to quantize to the nearest note
+ * @returns {[string, number]} The name and frequency of the nearest note
  */
-export const NOTES = {
-  "-": 0.0,
-  "C2": 65.406,
-  "C#2": 69.296,
-  "D2": 73.416,
-  "D#2": 77.796,
-  "E2": 82.406,
-  "F2": 87.308,
-  "F#2": 92.498,
-  "G2": 97.998,
-  "G#2": 103.826,
-  "A2": 110,
-  "A#2": 116.54,
-  "B2": 123.472,
-  "C3": 130.812,
-  "C#3": 138.592,
-  "D3": 146.832,
-  "D#3": 155.592,
-  "E3": 164.812,
-  "F3": 174.616,
-  "F#3": 184.996,
-  "G3": 195.996,
-  "G#3": 207.652,
-  "A3": 220,
-  "A#3": 233.08,
-  "B3": 246.944,
-  "C4": 261.624,
-  "C#4": 277.184,
-  "D4": 293.664,
-  "D#4": 311.184,
-  "E4": 329.624,
-  "F4": 349.232,
-  "F#4": 369.992,
-  "G4": 391.992,
-  "G#4": 415.304,
-  "A4": 440,
-  "A#4": 466.16,
-  "B4": 493.888,
-  "C5": 523.248,
-  "C#5": 554.368,
-  "D5": 587.328,
-  "D#5": 622.368,
-  "E5": 659.248,
-  "F5": 698.464,
-  "F#5": 739.984,
-  "G5": 783.984,
-  "G#5": 830.608,
-  "A5": 880,
-  "A#5": 932.32,
-  "B5": 987.776,
-  "C6": 1046.496,
-  "C#6": 1108.736,
-  "D6": 1174.656,
-  "D#6": 1244.736,
-  "E6": 1318.496,
-  "F6": 1396.928,
-  "F#6": 1479.968,
-  "G6": 1567.968,
-  "G#6": 1661.216,
-  "A6": 1760,
-  "A#6": 1864.64,
-  "B6": 1975.552,
-  "C7": 2092.992,
-};
+export function nearestNote(pitch) {
+  // Number of semitones (rounded) from A440 to get the nearest pitch.
+  let semitones = Math.round(12 * Math.log2(pitch / 440));
+
+  // Get the note name by indexing the number of semitones away from A
+  // Account for the fact that % can return a negative number, but we want
+  // something between 0 and 11
+  let name = NAMES[(semitones % 12 + 12) % 12];
+
+  // The octave number
+  // The reference pitch (440Hz) is in the 4th octave register.
+  // Octaves switch at each C, so we need to offset the semitones by 3 to get
+  // from A to C.
+  let octave = 4 + Math.ceil((semitones - 3) / 12);
+
+  let nearestPitch = 440 * 2 ** (semitones / 12);
+
+  return [name + octave.toString(), nearestPitch];
+}
+
+
+/**
+ * Find the difference between two pitches in cents
+ *
+ * @param {number} f1 The first pitch
+ * @param {number} f2 The second pitch
+ * @returns {number} The distance between the pitches in cents
+ */
+export function dCents(f1, f2) {
+  let cents = f2 > 0 ? 1200 * Math.log2(f1 / f2) : 0;
+  return clamp(cents, -50, 50);
+}
 
 /**
  * Get the index of the max element in an array
@@ -169,39 +139,6 @@ export function maxIdx(xs) {
   }
 
   return maxIdx;
-}
-
-/**
- * Find the note nearest to the provided frequency
- *
- * @param {number} freq The frequency to quantize to the nearest note
- * @returns {[string, number]} The name of the nearest note
- */
-export function nearestNote(freq) {
-  let nearest = "-";
-
-  for (let current in NOTES) {
-    let dCurrent = Math.abs(NOTES[current] - freq);
-    let dNearest = Math.abs(NOTES[nearest] - freq);
-
-    if (dCurrent < dNearest) {
-      nearest = current;
-    }
-  }
-
-  return [nearest, NOTES[nearest]];
-}
-
-/**
- * Find the difference between two pitches in cents
- *
- * @param {number} f1 The first pitch
- * @param {number} f2 The second pitch
- * @returns {number} The distance between the pitches in cents
- */
-export function dCents(f1, f2) {
-  let cents = f2 > 0 ? 1200 * Math.log2(f1 / f2) : 0;
-  return clamp(cents, -50, 50);
 }
 
 /**
