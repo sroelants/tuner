@@ -189,7 +189,7 @@ export function renderTuner(spectrum) {
   let [nearestName, nearestPitch] = nearestNote(pitch);
   let cents = dCents(pitch, nearestPitch);
 
-  ctx.fillStyle = Math.abs(cents) < 10 ?  "rgb(56 178 172)" : "rgb(51 65 85)";
+  ctx.fillStyle = Math.abs(cents) < 5 ?  "rgb(56 178 172)" : "rgb(51 65 85)";
   ctx.strokeStyle = "rgb(51 65 85)";
   ctx.font = "bold 48px sans-serif";
 
