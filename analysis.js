@@ -25,7 +25,7 @@ export const SAMPLING_RATE = new AudioContext().sampleRate;
  * @returns Float32Array The buffer of frequency samples
  */
 export function fft(samples) {
-  hann(new Float32Array(samples.buffer, 0, N_SAMPLES));
+  window(new Float32Array(samples.buffer, 0, N_SAMPLES));
   let output = new Float32Array(2*samples.length);
   cooleyTukey(samples, output, samples.length, 0, 1);
 
@@ -181,6 +181,22 @@ export function harmonicProductSpectrum(data) {
   return hps;
 }
 
+export const interpolate = interpolateGaussian;
+
+/**
+ * Given an array of data, and the index of the maximal value, perform a gaussian
+ * interpolation to get an interpolated value that approximates the true maximum.
+ *
+ * @param {Float32Array} data - The data to interpolate
+ * @param {number} idx - The index to interpolate around;
+ */
+function interpolateGaussian(data, idx) {
+  let y1 = data[idx - 1];
+  let y2 = data[idx];
+  let y3 = data[idx + 1];
+  return idx + 0.5 * Math.log(y3 / y1) / Math.log(y2 **2 / y1 / y3);
+}
+
 /**
  * Given an array of data, and the index of the maximal value, perform a parabolic
  * interpolation to get an interpolated value that approximates the true maximum.
@@ -188,17 +204,13 @@ export function harmonicProductSpectrum(data) {
  * @param {Float32Array} data - The data to interpolate
  * @param {number} idx - The index to interpolate around;
  */
-export function interpolate(data, idx) {
-  let x1 = idx - 1;
-  let x2 = idx;
-  let x3 = idx + 1;
-  let y1 = data[x1];
-  let y2 = data[x2];
-  let y3 = data[x3];
-
-  return x2 + 0.5 * ((y1 - y2) * (x3 - x2)**2 - (y3 - y2) * (x2 - x1)**2) /
-                    ((y1 - y2) * (x3 - x2)    + (y3 - y2) * (x2 - x1))
+function interpolateParabolic(data, idx) {
+  let y1 = data[idx - 1];
+  let y2 = data[idx];
+  let y3 = data[idx + 1];
+  return idx + 0.5 * (y1 - y3) / (y1 - 2 * y2 + y3)
 }
+
 
 /**
  * Given a spectral peak, see if there is an appreciable subharmonic that would
@@ -257,8 +269,10 @@ export function binToHz(bin) {
   return (bin / BIN_COUNT) * (SAMPLING_RATE / 2);
 }
 
+export const window = bhn;
+
 /**
- * Apply a Hann window to the provided data
+ * Apply a Hann window to the provided data.
  *
  * @param {Float32Array} data - The data to window
  */
@@ -268,4 +282,23 @@ function hann(data) {
   for (let i = 0; i < N; i++) {
     data[i] *= 0.5 - 0.5*Math.cos(2 * Math.PI * i / N)
   }
+}
+
+/**
+ * Apply a Blackman-Harris-Nutall window to the provided data
+ *
+ * Has better spectral behavior than Hann window when performing peak interpolation
+ *
+ * @param {Float32Array} data - The data to window
+ */
+function bhn(data) {
+  let N = data.length;
+
+  for (let i = 0; i < N; i++) {
+    data[i] *= 0.355768 +
+      0.487396 * Math.cos(2 * Math.PI * (i / N - 0.5)) +
+      0.144232 * Math.cos(4 * Math.PI * (i / N - 0.5)) +
+      0.012604 * Math.cos(6 * Math.PI * (i / N - 0.5));
+  }
+
 }
