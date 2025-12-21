@@ -255,7 +255,7 @@ export function findSubharmonic(data, peak) {
 export function findPitch(data) {
   let pitch = maxIdx(data);
   pitch = findSubharmonic(data, pitch);
-  pitch = interpolate(data, pitch);
+  pitch = interpolate(data, pitch) || pitch;
   return binToHz(pitch);
 }
 
