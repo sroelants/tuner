@@ -177,14 +177,14 @@ export function renderTuner(spectrum) {
   clearCanvas();
   ctx.save();
   ctx.strokeStyle = "rgb(51 65 85)";
-  ctx.font = "bold 48px sans-serif";
+  ctx.font = "bold 128px sans-serif";
   let placeholder = "A4";
   let midpoint = center(CANVAS);
 
   // Render skeleton UI first
   ctx.beginPath();
-  ctx.moveTo(midpoint.x - 100, midpoint.y + 30);
-  ctx.lineTo(midpoint.x + 100, midpoint.y + 30);
+  ctx.moveTo(midpoint.x - 200, midpoint.y + 100);
+  ctx.lineTo(midpoint.x + 200, midpoint.y + 100);
   ctx.stroke()
 
   let idx = maxIdx(spectrum);
@@ -222,7 +222,7 @@ export function renderTuner(spectrum) {
   );
 
   ctx.beginPath();
-  ctx.ellipse(midpoint.x + 2 * cents, midpoint.y + 30, 10, 10, 0, 0, 2*Math.PI);
+  ctx.ellipse(midpoint.x + 4 * cents, midpoint.y + 100, 10, 10, 0, 0, 2*Math.PI);
   ctx.fill();
 
   ctx.restore();
@@ -245,8 +245,8 @@ function smooth(callback, t = 0.1) {
 
     // Protect against accidental octave jumps
     let isOctave =
-        (1.95 < diff && diff < 2.05) ||
-        (0.49 < diff && diff < 0.51);
+        (1.9 < diff && diff < 2.1) ||
+        (0.48 < diff && diff < 0.52);
 
     if (isOctave) {
       return prev;
