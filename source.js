@@ -6,7 +6,13 @@
  * @returns void
  */
 
-import { FFT_SIZE } from "./util.js";
+/**
+ * The amount of samples used in a single window.
+ *
+ * This in part determines the frequency resolution.
+ */
+export const N_SAMPLES = 32 * 1024;
+
 
 /**
  * Create a sine wave source with the given parameters
@@ -58,7 +64,7 @@ export function AudioStreamSource(stream) {
   const ctx = new AudioContext();
   const source = ctx.createMediaStreamSource(stream);
   const analyzer = ctx.createAnalyser();
-  analyzer.fftSize = FFT_SIZE;
+  analyzer.fftSize = N_SAMPLES;
   source.connect(analyzer);
 
   return {
