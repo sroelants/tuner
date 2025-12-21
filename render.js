@@ -16,9 +16,11 @@ export const CANVAS = { x1: 0, y1: 0, x2: ctx.canvas.width, y2: ctx.canvas.heigh
 /**
  * Render the provided rect as a frame
  * @param {Rect} rect - The rectangle to frame
+ * @param {string} [label] - An optional label to render alongside the frame
  */
-export function drawFrame(rect) {
+export function drawFrame(rect, label) {
   ctx.strokeRect(rect.x1, rect.y1, width(rect), height(rect));
+  ctx.fillText(label, rect.x1, rect.y1 - 5);
 }
 
 /**
@@ -50,16 +52,6 @@ export function renderData(rect, data, opts = {}) {
   }
 
   ctx.stroke();
-}
-
-/**
- * Render a label around the given rect
- *
- * @param {Rect} rect - The rectangle to render the label for
- * @param {string} label - The label to render
- */
-export function label(rect, label) {
-  ctx.fillText(label, rect.x1, rect.y1 - 5);
 }
 
 /**
@@ -121,50 +113,56 @@ export function renderDebugInfo(samples, spectrum, dt) {
 
   let [samplesRect, spectraRect] = vsplit(CANVAS, 0.33);
   let [spectrumRect, hpsRect] = vsplit(spectraRect, 0.5);
+  samplesRect = pad(samplesRect, PADDING);
+  spectrumRect = pad(spectrumRect, PADDING);
+  hpsRect = pad(hpsRect, PADDING);
+
+  // Render frames
+  drawFrame(samplesRect, "Audio");
+  drawFrame(spectrumRect, "Spectrum");
+  drawFrame(hpsRect, "Harmonic Product");
+
+  let idx = maxIdx(spectrum);
+  let max = spectrum[idx];
+  let bins = spectrum.length / 16;
 
   // Render samples
-  {
-    samplesRect = pad(samplesRect, PADDING);
-    drawFrame(samplesRect);
-    label(samplesRect, "Audio");
-    renderData(samplesRect, samples.slice(0, N_SAMPLES ), { scale: 200, align: "center" });
-  }
+  renderData(samplesRect, samples.slice(0, N_SAMPLES ), { scale: 200, align: "center" });
 
-  let bins = spectrum.length / 16;
+  // Render extra info
+  ctx.fillText(`FPS: ${fps.toFixed(0)}`, CANVAS.x1, CANVAS.y2);
+
+
+  // Don't attempt to render spectral data unless there's an appreciable signal
+  if (max < 10) {
+    return;
+  }
 
   // Render spectrum (Only the first chunk)
   {
-    let rect = pad(spectrumRect, PADDING);
     let data = spectrum.slice(0, bins);
-    drawFrame(rect);
-    label(rect, "Spectrum");
-    renderData(rect, data, { scale: 0.5 });
+    renderData(spectrumRect, data, { scale: 0.5 });
 
     let max = maxIdx(data);
-    lineAt(rect, data, max, "red");
+    lineAt(spectrumRect, data, max, "red");
 
     let f0 = interpolate(data, findSubharmonic(data, max));
-    lineAt(rect, data, f0, "blue");
+    lineAt(spectrumRect, data, f0, "blue");
   }
 
   // Render hps (Only the first chunk)
   {
     let hps = harmonicProductSpectrum(spectrum);
-    let rect = pad(hpsRect, PADDING);
     let data = hps.slice(0, bins);
-    drawFrame(rect);
-    label(rect, "Harmonic Product");
-    renderData(rect, data, { scale: 0.00001 });
+    renderData(hpsRect, data, { scale: 0.00001 });
 
     let max = maxIdx(data);
-    lineAt(rect, data, max, "red");
+    lineAt(hpsRect, data, max, "red");
 
     let f0 = interpolate(data, findSubharmonic(data, max));
-    lineAt(rect, data, f0, "blue");
+    lineAt(hpsRect, data, f0, "blue");
   }
 
-  // Render extra info
-  ctx.fillText(`FPS: ${fps.toFixed(0)}`, CANVAS.x1, CANVAS.y2);
 }
 
 /**
@@ -175,11 +173,32 @@ export function renderDebugInfo(samples, spectrum, dt) {
 export function renderTuner(spectrum) {
   clearCanvas();
   ctx.save();
+  ctx.strokeStyle = "rgb(51 65 85)";
+  ctx.font = "bold 48px sans-serif";
+  let placeholder = "A4";
+  let midpoint = center(CANVAS);
+
+  // Render skeleton UI first
+  ctx.beginPath();
+  ctx.moveTo(midpoint.x - 100, midpoint.y + 30);
+  ctx.lineTo(midpoint.x + 100, midpoint.y + 30);
+  ctx.stroke()
 
   let idx = maxIdx(spectrum);
   let max = spectrum[idx];
 
-  if (max < 75) {
+  // Only render actual tuning stuff if there's an appreciable signal
+  if (max < 25) {
+    ctx.fillStyle = "#99a1af";
+    let textSize = ctx.measureText(placeholder);
+
+    ctx.fillText(
+        placeholder,
+        midpoint.x - textSize.width / 2,
+        midpoint.y,
+    );
+
+    ctx.restore();
     return;
   }
 
@@ -190,22 +209,14 @@ export function renderTuner(spectrum) {
   let cents = dCents(pitch, nearestPitch);
 
   ctx.fillStyle = Math.abs(cents) < 5 ?  "rgb(56 178 172)" : "rgb(51 65 85)";
-  ctx.strokeStyle = "rgb(51 65 85)";
-  ctx.font = "bold 48px sans-serif";
 
   let textSize = ctx.measureText(nearestName);
-  let midpoint = center(CANVAS);
 
   ctx.fillText(
     nearestName,
     midpoint.x - textSize.width / 2,
     midpoint.y,
   );
-
-  ctx.beginPath();
-  ctx.moveTo(midpoint.x - 100, midpoint.y + 30);
-  ctx.lineTo(midpoint.x + 100, midpoint.y + 30);
-  ctx.stroke()
 
   ctx.beginPath();
   ctx.ellipse(midpoint.x + 2 * cents, midpoint.y + 30, 10, 10, 0, 0, 2*Math.PI);
