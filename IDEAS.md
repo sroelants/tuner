@@ -1,0 +1,4 @@
+- [ ] Choose preset tuning to increase accuracy (Maximum likelihood detection)
+- [ ] Move heavy logic into WASM
+- [ ] Use `MediaRecorder` api to get more control over audio data?
+- [ ] Play around with McLeod pitch method (MPM)?
