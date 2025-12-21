@@ -237,11 +237,20 @@ export function renderTuner(spectrum) {
  * @returns {(x: T) => number} The smoothed callback
  */
 function smooth(callback, t = 0.1) {
-  let prev = 0;
+  let prev = 440;
 
   return (x) => {
     let val = callback(x);
     let diff = Math.abs(val - prev) / ((val + prev) / 2);
+
+    // Protect against accidental octave jumps
+    let isOctave =
+        (1.95 < diff && diff < 2.05) ||
+        (0.49 < diff && diff < 0.51);
+
+    if (isOctave) {
+      return prev;
+    }
 
     // If the difference between the new value and the previous one is
     // appreciable, simply jump to the new value

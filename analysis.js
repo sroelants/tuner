@@ -269,7 +269,7 @@ export function binToHz(bin) {
   return (bin / BIN_COUNT) * (SAMPLING_RATE / 2);
 }
 
-export const window = bhn;
+export const window = hann;
 
 /**
  * Apply a Hann window to the provided data.
