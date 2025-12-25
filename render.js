@@ -174,6 +174,8 @@ const smoothPitch = smooth(findPitch);
  * @param {Float32Array} spectrum
  */
 export function renderTuner(spectrum) {
+  const TOLERANCE = 5;
+  const TOL_ANGLE = TOLERANCE / 100 * 1.5 * Math.PI;
   clearCanvas();
   ctx.save();
   ctx.strokeStyle = "rgb(51 65 85)";
@@ -183,22 +185,30 @@ export function renderTuner(spectrum) {
 
   // Render skeleton UI first
   ctx.beginPath();
-  ctx.moveTo(midpoint.x - 200, midpoint.y + 100);
-  ctx.lineTo(midpoint.x + 200, midpoint.y + 100);
+  // Dial
+  ctx.arc(midpoint.x, midpoint.y, 200, 0.25*Math.PI, 0.75*Math.PI, true)
   ctx.stroke()
+
+  ctx.beginPath();
+  // "In-tune" zone
+  ctx.lineWidth = 5;
+  ctx.arc(midpoint.x, midpoint.y, 200, -Math.PI / 2 - TOL_ANGLE, -Math.PI/2 + TOL_ANGLE, false)
+  ctx.stroke();
+
+  ctx.lineWidth = 1;
 
   let idx = maxIdx(spectrum);
   let max = spectrum[idx];
 
   // Only render actual tuning stuff if there's an appreciable signal
   if (max < SIGNAL_THRESHOLD) {
-    ctx.fillStyle = "#99a1af";
+    ctx.fillStyle = "#d1d5dc";
     let textSize = ctx.measureText(placeholder);
 
     ctx.fillText(
         placeholder,
         midpoint.x - textSize.width / 2,
-        midpoint.y,
+        midpoint.y + 32,
     );
 
     ctx.restore();
@@ -218,12 +228,18 @@ export function renderTuner(spectrum) {
   ctx.fillText(
     nearestName,
     midpoint.x - textSize.width / 2,
-    midpoint.y,
+    midpoint.y + 32,
   );
 
-  ctx.beginPath();
-  ctx.ellipse(midpoint.x + 4 * cents, midpoint.y + 100, 10, 10, 0, 0, 2*Math.PI);
-  ctx.fill();
+  { // Render indicator along the dial
+    ctx.beginPath();
+    let t = 0.5 + cents / 100; // cents is -50 to 50, but t is 0 to 1
+    let th = (1 - t) * (-1.25 * Math.PI) + t * (0.25 * Math.PI);
+    let x = midpoint.x + 200 * Math.cos(th);
+    let y = midpoint.y + 200 * Math.sin(th);
+    ctx.ellipse(x, y, 10, 10, 0, 0, 2*Math.PI);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
